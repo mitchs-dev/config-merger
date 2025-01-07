@@ -1,5 +1,7 @@
 # Config Merger
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Config Merger is a simple script which merges secrets with configuration files. It's original design is to work in init containers for Kubernetes workloads. However, you could really use this anywhere.
 
 ## Usage
