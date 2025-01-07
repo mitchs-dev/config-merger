@@ -1,8 +1,10 @@
 # Config Merger
 
-Config Merger is a simple script which merges secrets with configuration files. It's original design is to work in init containers for Kubernetes deployments. However, you could really use this anywhere.
+Config Merger is a simple script which merges secrets with configuration files. It's original design is to work in init containers for Kubernetes workloads. However, you could really use this anywhere.
 
 ## Usage
+
+As mentioned, the primary use case is for Kubernetes init  containers, so we will focus on that. However, you could use this in any environment where you need to merge secrets with configuration files.
 
 ### Kubernetes
 
@@ -18,29 +20,51 @@ spec:
     spec:
       initContainers:
       - name: config-init
-        image: vo1d/config-merger:v1.0.0
-        command: ['/bin/sh', '-c']
-        args: ['-i ,'tmp','-o',/output/config']
+        image: vo1d/config-merger:latest 
+        # You could just mount the whole 'tmp' directory if you want, but this is more explicit
+        args: ['-i ,'tmp/config','tmp/secrets','-o',/app/config']
         volumeMounts:
-        - name: config
+        - name: my-deployment-config
+          readOnly: true
           mountPath: /tmp/config
-        - name: secrets
+        - name: my-deployment-secrets
+          readOnly: true
           mountPath: /tmp/secrets
         - name: merged-config
-          mountPath: /output/config
+          mountPath: /app/config
       containers:
       - name: my-deployment
         image: my-deployment-image
         volumeMounts:
         - name: merged-config
+          readOnly: true
           mountPath: /app/config
       volumes:
-      - name: config
-        configMap:
-          name: my-deployment-config
-      - name: secrets
+      - name: my-deployment-secrets
         secret:
           secretName: my-deployment-secrets
+      - name: my-deployment-config
+        configMap:
+          name: my-deployment-config
       - name: merged-config
         emptyDir: {}
 ```
+
+Now you can mount your secrets and configMaps to the init container and it will merge them together and output the result to the merged-config volume. You can then mount that volume to your application container.
+
+### Local
+
+For local usage, you can just run the container and mount the directories you want to merge. Here is an example:
+
+```bash
+docker run -v /path/to/config:/tmp/config -v /path/to/secrets:/tmp/secrets -v /path/to/output:/output vo1d/config-merger:latest -i /tmp -o /output
+```
+
+Alternatively, you can use the `Makefile` which will run it for you:
+
+```bash
+make run
+```
+
+> **Note:** The Makefile is setup for development purposes and only looks at the `test` directory for the input and outputs to `output.yaml`. You can modify this for your purposes but you'll need to modify the Makefile.
+
